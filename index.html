@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drag & Drop - Tecnica Sollevamento Sicuro</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            width: 800px;
+            height: 550px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        h1 {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: white;
+            color: #667eea;
+        }
+
+        .btn-primary:hover {
+            background: #f0f0f0;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid white;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .instructions {
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        h2 {
+            color: #667eea;
+            font-size: 18px;
+            margin-bottom: 15px;
+        }
+
+        h3 {
+            color: #764ba2;
+            font-size: 15px;
+            margin-top: 15px;
+            margin-bottom: 8px;
+        }
+
+        p, li {
+            font-size: 13px;
+            line-height: 1.6;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        ul {
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+
+        .game-area {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            width: 100%;
+        }
+
+        .game-content {
+            display: flex;
+            gap: 20px;
+            flex: 1;
+        }
+
+        .left-column {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .right-column {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .scenario-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 10px 13px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+        }
+
+        .scenario-text {
+            color: #856404;
+            font-size: 13px;
+            line-height: 1.5;
+            font-weight: 500;
+        }
+
+        .drop-zone {
+            background: #f8f9fa;
+            border: 2px dashed #dee2e6;
+            border-radius: 8px;
+            padding: 10px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .drop-zone-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .drop-slots {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex: 1;
+        }
+
+        .drop-slot {
+            background: white;
+            border: 2px solid #dee2e6;
+            border-radius: 6px;
+            font-size: 11px;
+            line-height: 1.2;
+            min-height: 40px;
+            max-height: 40px;
+            display: flex;
+            align-items: center;
+            padding: 4px;
+            position: relative;
+        }
+
+        .drop-slot::before {
+            content: attr(data-number);
+            position: absolute;
+            left: -30px;
+            width: 24px;
+            height: 24px;
+            background: #667eea;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 12px;
+        }
+
+        .drop-slot.filled {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+
+        .drop-slot.drag-over {
+            background: #e3f2fd;
+            border-color: #2196F3;
+        }
+
+        .steps-pool {
+            background: #f8f9fa;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .pool-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #764ba2;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .steps-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .step-card {
+            background: white;
+            border: 2px solid #667eea;
+            border-radius: 6px;
+            padding: 8px 10px;
+            cursor: move;
+            transition: all 0.3s;
+            font-size: 11px;
+            line-height: 1.2;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .step-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+        .step-card.dragging {
+            opacity: 0.5;
+        }
+
+        .step-card.placed {
+            display: none;
+        }
+
+        .check-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 30px;
+            font-size: 14px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 15px;
+            align-self: center;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            transition: all 0.3s;
+            width: 100%;
+            max-width: 300px;
+        }
+
+        .check-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+        }
+
+        .check-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .feedback {
+            text-align: center;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .feedback h2 {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+
+        .feedback.success h2 { color: #4CAF50; }
+        .feedback.error h2 { color: #f44336; }
+
+        .feedback p {
+            font-size: 15px;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+
+        .feedback-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .btn-large {
+            padding: 12px 30px;
+            font-size: 15px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .start-section {
+            text-align: center;
+            margin-top: 30px;
+        }
+
+        .btn-start {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            padding: 15px 40px;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+            transition: all 0.3s;
+        }
+
+        .btn-start:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(76, 175, 80, 0.4);
+        }
+
+        .error-highlight {
+            background: #ffebee !important;
+            border-color: #f44336 !important;
+        }
+
+        .correct-highlight {
+            background: #e8f5e9 !important;
+            border-color: #4CAF50 !important;
+        }
+
+        .attempts-counter {
+            text-align: center;
+            color: #666;
+            font-size: 13px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="btn-secondary" onclick="resetGame()">🔄 Ricomincia</button>
+            <h1>🏋️ Tecnica Corretta di Sollevamento</h1>
+            <button class="btn-primary" onclick="window.close()">✕ Torna al Corso</button>
+        </div>
+
+        <div class="content" id="instructionsPage">
+            <div class="instructions">
+                <h2>🎯 Obiettivo del Gioco</h2>
+                <p>Riordina i passaggi della tecnica corretta di sollevamento di una cassetta di pescato da 35 kg. La sequenza giusta previene lombalgie, ernie discali e altre patologie muscoloscheletriche.</p>
+
+                <h3>📋 Come Giocare</h3>
+                <ul>
+                    <li>Trascina i passaggi dalla zona in basso verso gli slot numerati in alto</li>
+                    <li>Posiziona i passaggi nell'ordine corretto dall'1 al 7</li>
+                    <li>Puoi spostare i passaggi tra gli slot per correggere l'ordine</li>
+                    <li>Clicca su "Verifica Sequenza" quando hai finito</li>
+                    <li>Se sbagli, riceverai indicazioni sugli errori e potrai riprovare</li>
+                </ul>
+
+                
+
+                <div class="start-section">
+                    <button class="btn-start" onclick="startGame()">▶ Inizia il Gioco</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="content hidden" id="gamePage">
+            <div class="game-area">
+                <div class="scenario-box">
+                    <div class="scenario-text">📦 Devi sollevare una cassetta di pescato da 35 kg dal ponte e trasportarla in stiva</div>
+                </div>
+
+                <div class="game-content">
+                    <div class="left-column">
+                        <div class="drop-zone">
+                            <div class="drop-zone-title"></div>
+                            <div class="drop-slots" id="dropSlots"></div>
+                        </div>
+                    </div>
+
+                    <div class="right-column">
+                        <div class="steps-pool">
+                            <div class="pool-title"></div>
+                            <div class="steps-container" id="stepsContainer"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="check-button" id="checkButton" onclick="checkSequence()" disabled>
+                    ✓ Verifica Sequenza
+                </button>
+                <div class="attempts-counter" id="attemptsCounter">Tentativi: 0</div>
+            </div>
+        </div>
+
+        <div class="content hidden" id="feedbackPage">
+            <div class="feedback" id="feedbackContent">
+                <h2 id="feedbackTitle"></h2>
+                <p id="feedbackText"></p>
+                <div class="feedback-buttons">
+                    <button class="btn-start btn-large" onclick="resetGame()">🔄 Riprova</button>
+                    <button class="btn-primary btn-large" onclick="window.close()">✕ Torna al Corso</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const CORRECT_SEQUENCE = [
+            "Valutazione preliminare: peso, stabilità, punti di presa, ingombro",
+            "Posizionarsi con i piedi divaricati (larghezza spalle)",
+            "Avvicinarsi al carico portando un piede vicino o sotto il carico",
+            "Flettere ginocchia mantenendo la schiena dritta",
+            "Afferrare saldamente il carico con entrambe le mani",
+            "Sollevare estendendo gambe mantenendo carico vicino al corpo",
+            "Trasportare il carico tenendolo vicino al corpo, schiena dritta"
+        ];
+
+        let currentSequence = Array(7).fill(null);
+        let attempts = 0;
+        let draggedElement = null;
+
+        function startGame() {
+            attempts = 0;
+            currentSequence = Array(7).fill(null);
+            updateAttemptsCounter();
+            renderGame();
+            showPage('gamePage');
+        }
+
+        function renderGame() {
+            // Render drop slots
+            const slotsContainer = document.getElementById('dropSlots');
+            slotsContainer.innerHTML = '';
+            
+            for (let i = 0; i < 7; i++) {
+                const slot = document.createElement('div');
+                slot.className = 'drop-slot';
+                slot.dataset.index = i;
+                slot.dataset.number = i + 1;
+                
+                if (currentSequence[i]) {
+                    slot.classList.add('filled');
+                    const card = createStepCard(currentSequence[i], true);
+                    slot.appendChild(card);
+                }
+                
+                slot.addEventListener('dragover', handleDragOver);
+                slot.addEventListener('drop', handleDrop);
+                slot.addEventListener('dragleave', handleDragLeave);
+                
+                slotsContainer.appendChild(slot);
+            }
+
+            // Render available steps
+            const stepsContainer = document.getElementById('stepsContainer');
+            stepsContainer.innerHTML = '';
+            
+            const shuffled = [...CORRECT_SEQUENCE].sort(() => Math.random() - 0.5);
+            
+            shuffled.forEach(step => {
+                if (!currentSequence.includes(step)) {
+                    const card = createStepCard(step, false);
+                    stepsContainer.appendChild(card);
+                }
+            });
+
+            updateCheckButton();
+        }
+
+        function createStepCard(text, inSlot) {
+            const card = document.createElement('div');
+            card.className = 'step-card';
+            card.textContent = text;
+            card.draggable = true;
+            card.dataset.step = text;
+            
+            card.addEventListener('dragstart', handleDragStart);
+            card.addEventListener('dragend', handleDragEnd);
+            
+            return card;
+        }
+
+        function handleDragStart(e) {
+            draggedElement = e.target;
+            e.target.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', e.target.innerHTML);
+        }
+
+        function handleDragEnd(e) {
+            e.target.classList.remove('dragging');
+        }
+
+        function handleDragOver(e) {
+            if (e.preventDefault) {
+                e.preventDefault();
+            }
+            e.dataTransfer.dropEffect = 'move';
+            
+            const slot = e.currentTarget;
+            if (slot.classList.contains('drop-slot')) {
+                slot.classList.add('drag-over');
+            }
+            
+            return false;
+        }
+
+        function handleDragLeave(e) {
+            e.currentTarget.classList.remove('drag-over');
+        }
+
+        function handleDrop(e) {
+            if (e.stopPropagation) {
+                e.stopPropagation();
+            }
+            
+            e.currentTarget.classList.remove('drag-over');
+            
+            const slot = e.currentTarget;
+            const slotIndex = parseInt(slot.dataset.index);
+            const draggedText = draggedElement.dataset.step;
+            
+            // Remove from old position if it was in a slot
+            const oldIndex = currentSequence.indexOf(draggedText);
+            if (oldIndex !== -1) {
+                currentSequence[oldIndex] = null;
+            }
+            
+            // Swap if slot is occupied
+            if (currentSequence[slotIndex]) {
+                const swappedStep = currentSequence[slotIndex];
+                if (oldIndex !== -1) {
+                    currentSequence[oldIndex] = swappedStep;
+                }
+            }
+            
+            // Place in new slot
+            currentSequence[slotIndex] = draggedText;
+            
+            renderGame();
+            
+            return false;
+        }
+
+        function updateCheckButton() {
+            const allFilled = currentSequence.every(step => step !== null);
+            document.getElementById('checkButton').disabled = !allFilled;
+        }
+
+        function checkSequence() {
+            attempts++;
+            updateAttemptsCounter();
+            
+            let allCorrect = true;
+            const slots = document.querySelectorAll('.drop-slot');
+            
+            // Remove previous highlights
+            slots.forEach(slot => {
+                slot.classList.remove('error-highlight', 'correct-highlight');
+            });
+            
+            // Check each position
+            currentSequence.forEach((step, index) => {
+                const isCorrect = step === CORRECT_SEQUENCE[index];
+                const slot = slots[index];
+                
+                if (isCorrect) {
+                    slot.classList.add('correct-highlight');
+                } else {
+                    slot.classList.add('error-highlight');
+                    allCorrect = false;
+                }
+            });
+            
+            if (allCorrect) {
+                setTimeout(() => showSuccess(), 800);
+            } else {
+                // Show error feedback
+                setTimeout(() => {
+                    alert(`Sequenza non corretta! Hai ${7 - currentSequence.filter((s, i) => s === CORRECT_SEQUENCE[i]).length} passaggi nell'ordine sbagliato. Gli slot evidenziati in rosso contengono errori. Riprova!`);
+                    
+                    // Remove highlights after feedback
+                    slots.forEach(slot => {
+                        slot.classList.remove('error-highlight', 'correct-highlight');
+                    });
+                }, 800);
+            }
+        }
+
+        function showSuccess() {
+            const feedbackEl = document.getElementById('feedbackContent');
+            
+            let message, title;
+            if (attempts === 1) {
+                title = '🏆 Perfetto al Primo Tentativo!';
+                message = 'Eccezionale! Hai dimostrato una conoscenza perfetta della tecnica corretta di sollevamento. Questa sequenza previene il 90% delle lombalgie professionali nel settore pesca.';
+                feedbackEl.className = 'feedback success';
+            } else if (attempts <= 3) {
+                title = '✅ Ottimo Lavoro!';
+                message = `Hai completato la sequenza in ${attempts} tentativi! Conosci bene la tecnica corretta di sollevamento. Ricorda sempre di applicare questi principi nelle operazioni quotidiane a bordo.`;
+                feedbackEl.className = 'feedback success';
+            } else {
+                title = '✓ Ben Fatto!';
+                message = `Sequenza completata in ${attempts} tentativi. Continua a esercitarti su questi passaggi perché la corretta tecnica di sollevamento è fondamentale per prevenire infortuni.`;
+                feedbackEl.className = 'feedback success';
+            }
+            
+            document.getElementById('feedbackTitle').textContent = title;
+            document.getElementById('feedbackText').textContent = message;
+            
+            showPage('feedbackPage');
+        }
+
+        function updateAttemptsCounter() {
+            document.getElementById('attemptsCounter').textContent = `Tentativi: ${attempts}`;
+        }
+
+        function resetGame() {
+            showPage('instructionsPage');
+        }
+
+        function showPage(pageId) {
+            document.getElementById('instructionsPage').classList.add('hidden');
+            document.getElementById('gamePage').classList.add('hidden');
+            document.getElementById('feedbackPage').classList.add('hidden');
+            document.getElementById(pageId).classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
