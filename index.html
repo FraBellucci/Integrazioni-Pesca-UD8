@@ -194,6 +194,7 @@
             align-items: center;
             padding: 4px;
             position: relative;
+            transition: all 0.2s;
         }
 
         .drop-slot::before {
@@ -220,6 +221,7 @@
         .drop-slot.drag-over {
             background: #e3f2fd;
             border-color: #2196F3;
+            transform: scale(1.02);
         }
 
         .steps-pool {
@@ -258,6 +260,7 @@
             font-size: 11px;
             line-height: 1.2;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            user-select: none;
         }
 
         .step-card:hover {
@@ -266,7 +269,8 @@
         }
 
         .step-card.dragging {
-            opacity: 0.5;
+            opacity: 0.4;
+            cursor: grabbing;
         }
 
         .step-card.placed {
@@ -397,8 +401,6 @@
                     <li>Se sbagli, riceverai indicazioni sugli errori e potrai riprovare</li>
                 </ul>
 
-                
-
                 <div class="start-section">
                     <button class="btn-start" onclick="startGame()">▶ Inizia il Gioco</button>
                 </div>
@@ -414,14 +416,14 @@
                 <div class="game-content">
                     <div class="left-column">
                         <div class="drop-zone">
-                            <div class="drop-zone-title"></div>
+                            <div class="drop-zone-title">Sequenza Corretta</div>
                             <div class="drop-slots" id="dropSlots"></div>
                         </div>
                     </div>
 
                     <div class="right-column">
                         <div class="steps-pool">
-                            <div class="pool-title"></div>
+                            <div class="pool-title">Passaggi da Ordinare</div>
                             <div class="steps-container" id="stepsContainer"></div>
                         </div>
                     </div>
@@ -460,17 +462,19 @@
         let currentSequence = Array(7).fill(null);
         let attempts = 0;
         let draggedElement = null;
+        let draggedFromSlot = null;
 
         function startGame() {
             attempts = 0;
             currentSequence = Array(7).fill(null);
+            draggedElement = null;
+            draggedFromSlot = null;
             updateAttemptsCounter();
             renderGame();
             showPage('gamePage');
         }
 
         function renderGame() {
-            // Render drop slots
             const slotsContainer = document.getElementById('dropSlots');
             slotsContainer.innerHTML = '';
             
@@ -482,8 +486,9 @@
                 
                 if (currentSequence[i]) {
                     slot.classList.add('filled');
-                    const card = createStepCard(currentSequence[i], true);
-                    slot.appendChild(card);
+                    slot.textContent = currentSequence[i];
+                    slot.draggable = true;
+                    slot.addEventListener('dragstart', handleSlotDragStart);
                 }
                 
                 slot.addEventListener('dragover', handleDragOver);
@@ -493,7 +498,6 @@
                 slotsContainer.appendChild(slot);
             }
 
-            // Render available steps
             const stepsContainer = document.getElementById('stepsContainer');
             stepsContainer.innerHTML = '';
             
@@ -501,7 +505,13 @@
             
             shuffled.forEach(step => {
                 if (!currentSequence.includes(step)) {
-                    const card = createStepCard(step, false);
+                    const card = document.createElement('div');
+                    card.className = 'step-card';
+                    card.textContent = step;
+                    card.draggable = true;
+                    card.dataset.step = step;
+                    card.addEventListener('dragstart', handleCardDragStart);
+                    card.addEventListener('dragend', handleDragEnd);
                     stepsContainer.appendChild(card);
                 }
             });
@@ -509,24 +519,21 @@
             updateCheckButton();
         }
 
-        function createStepCard(text, inSlot) {
-            const card = document.createElement('div');
-            card.className = 'step-card';
-            card.textContent = text;
-            card.draggable = true;
-            card.dataset.step = text;
-            
-            card.addEventListener('dragstart', handleDragStart);
-            card.addEventListener('dragend', handleDragEnd);
-            
-            return card;
-        }
-
-        function handleDragStart(e) {
-            draggedElement = e.target;
+        function handleCardDragStart(e) {
+            draggedElement = e.target.dataset.step;
+            draggedFromSlot = null;
             e.target.classList.add('dragging');
             e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/html', e.target.innerHTML);
+            e.dataTransfer.setData('text/plain', draggedElement);
+        }
+
+        function handleSlotDragStart(e) {
+            const slotIndex = parseInt(e.target.dataset.index);
+            draggedElement = currentSequence[slotIndex];
+            draggedFromSlot = slotIndex;
+            e.target.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', draggedElement);
         }
 
         function handleDragEnd(e) {
@@ -534,17 +541,14 @@
         }
 
         function handleDragOver(e) {
-            if (e.preventDefault) {
-                e.preventDefault();
-            }
+            e.preventDefault();
+            e.stopPropagation();
             e.dataTransfer.dropEffect = 'move';
             
             const slot = e.currentTarget;
-            if (slot.classList.contains('drop-slot')) {
+            if (slot.classList.contains('drop-slot') && !slot.classList.contains('dragging')) {
                 slot.classList.add('drag-over');
             }
-            
-            return false;
         }
 
         function handleDragLeave(e) {
@@ -552,36 +556,34 @@
         }
 
         function handleDrop(e) {
-            if (e.stopPropagation) {
-                e.stopPropagation();
-            }
-            
-            e.currentTarget.classList.remove('drag-over');
+            e.preventDefault();
+            e.stopPropagation();
             
             const slot = e.currentTarget;
-            const slotIndex = parseInt(slot.dataset.index);
-            const draggedText = draggedElement.dataset.step;
+            slot.classList.remove('drag-over');
             
-            // Remove from old position if it was in a slot
-            const oldIndex = currentSequence.indexOf(draggedText);
-            if (oldIndex !== -1) {
-                currentSequence[oldIndex] = null;
+            if (!slot.classList.contains('drop-slot')) return;
+            
+            const targetIndex = parseInt(slot.dataset.index);
+            
+            // Remove from old slot if dragging from slot
+            if (draggedFromSlot !== null) {
+                currentSequence[draggedFromSlot] = null;
             }
             
-            // Swap if slot is occupied
-            if (currentSequence[slotIndex]) {
-                const swappedStep = currentSequence[slotIndex];
-                if (oldIndex !== -1) {
-                    currentSequence[oldIndex] = swappedStep;
-                }
+            // Swap if target slot is occupied
+            if (currentSequence[targetIndex] && draggedFromSlot !== null) {
+                const temp = currentSequence[targetIndex];
+                currentSequence[targetIndex] = draggedElement;
+                currentSequence[draggedFromSlot] = temp;
+            } else {
+                currentSequence[targetIndex] = draggedElement;
             }
             
-            // Place in new slot
-            currentSequence[slotIndex] = draggedText;
+            draggedElement = null;
+            draggedFromSlot = null;
             
             renderGame();
-            
-            return false;
         }
 
         function updateCheckButton() {
@@ -596,12 +598,10 @@
             let allCorrect = true;
             const slots = document.querySelectorAll('.drop-slot');
             
-            // Remove previous highlights
             slots.forEach(slot => {
                 slot.classList.remove('error-highlight', 'correct-highlight');
             });
             
-            // Check each position
             currentSequence.forEach((step, index) => {
                 const isCorrect = step === CORRECT_SEQUENCE[index];
                 const slot = slots[index];
@@ -617,11 +617,10 @@
             if (allCorrect) {
                 setTimeout(() => showSuccess(), 800);
             } else {
-                // Show error feedback
+                const wrongCount = currentSequence.filter((s, i) => s !== CORRECT_SEQUENCE[i]).length;
                 setTimeout(() => {
-                    alert(`Sequenza non corretta! Hai ${7 - currentSequence.filter((s, i) => s === CORRECT_SEQUENCE[i]).length} passaggi nell'ordine sbagliato. Gli slot evidenziati in rosso contengono errori. Riprova!`);
+                    alert(`Sequenza non corretta! Hai ${wrongCount} passaggi nell'ordine sbagliato. Gli slot evidenziati in rosso contengono errori. Riprova!`);
                     
-                    // Remove highlights after feedback
                     slots.forEach(slot => {
                         slot.classList.remove('error-highlight', 'correct-highlight');
                     });
